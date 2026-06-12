@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PoolTimer Dashboard</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: white;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    /* ================= MAIN LAYOUT ================= */
+    #dashboard {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* ================= LEFT PANEL ================= */
+    #leftPanel {
+      width: 66%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    /* ================= RIGHT PANEL ================= */
+    #rightPanel {
+      width: 34%;
+      display: flex;
+      flex-direction: column;
+      border-left: 2px solid #ddd;
+      box-sizing: border-box;
+    }
+
+    #leaderboard {
+      flex: 1;
+      border-bottom: 2px solid #ddd;
+      padding: 15px;
+      overflow: hidden;
+    }
+
+    #messageBoard {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+    }
+
+    .panelTitle {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    /* ================= HEADER ================= */
+    #header {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 34px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    /* ================= RING ================= */
+    #ring-container {
+      position: relative;
+      width: 560px;
+      height: 560px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    svg {
+      transform: rotate(-90deg);
+      width: 560px;
+      height: 560px;
+    }
+
+    .track {
+      stroke: #e6e6e6;
+      stroke-width: 22;
+      fill: none;
+    }
+
+    .progress {
+      stroke-width: 22;
+      fill: none;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s linear;
+    }
+
+    /* ================= CENTER TEXT ================= */
+    #countdown {
+      position: absolute;
+      font-size: 110px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    #subtitle {
+      position: absolute;
+      margin-top: 140px;
+      font-size: 18px;
+      opacity: 0.7;
+    }
+
+    /* ================= MODE BLOCK ================= */
+    #mode {
+      text-align: center;
+      margin-top: 5px;
+    }
+
+    /* ================= UPCOMING ================= */
+    #upcomingReminder {
+      margin-top: 10px;
+      text-align: center;
+      min-height: 34px;
+      line-height: 1.2;
+    }
+
+    /* ================= ACTIVE BANNER ================= */
+    #activeBanner {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 18px;
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
+      display: none;
+      z-index: 50;
+    }
+
+    /* ================= LEADERBOARD ================= */
+    #teams div {
+      display: flex;
+      justify-content: space-between;
+      font-size: 20px;
+      padding: 6px 0;
+    }
+
+    /* ================= MESSAGE ================= */
+    #messageText {
+      font-size: 18px;
+      white-space: pre-wrap;
+    }
+
+    /* ================= OVERLAY ================= */
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      color: red;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 140px;
+      font-weight: bold;
+      z-index: 999;
+    }
+
+    /* ================= AUDIO ================= */
+    #unlock {
+      position: absolute;
+      bottom: 10px;
+      font-size: 14px;
+      opacity: 0.4;
+      cursor: pointer;
+      z-index: 200;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="dashboard">
+
+  <!-- LEFT -->
+  <div id="leftPanel">
+
+    <div id="header">Loading...</div>
+
+    <div id="ring-container">
+      <svg>
+        <circle class="track" cx="280" cy="280" r="230" />
+        <circle id="progress-ring" class="progress" cx="280" cy="280" r="230" />
+      </svg>
+
+      <div id="countdown">--:--</div>
+      <div id="subtitle">until next rotation</div>
+    </div>
+
+    <div id="mode"></div>
+
+    <div id="upcomingReminder"></div>
+
+    <div id="activeBanner"></div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div id="rightPanel">
+
+    <div id="leaderboard">
+      <div class="panelTitle">Leaderboard</div>
+      <div id="teams"></div>
+    </div>
+
+    <div id="messageBoard">
+      <div class="panelTitle">Announcements</div>
+      <div id="messageText"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="overlay">ROTATE</div>
+<div id="unlock">Tap to enable audio</div>
+
+<script>
+
+let audioEnabled = false;
+
+const audio = {
+  warn: new Audio("/sounds/warn.mp3"),
+  rotate: new Audio("/sounds/chime.mp3")
+};
+
+document.getElementById("unlock").addEventListener("click", async () => {
+  audioEnabled = true;
+  document.getElementById("unlock").style.display = "none";
+
+  try {
+    await audio.warn.play();
+    audio.warn.pause();
+    audio.warn.currentTime = 0;
+
+    await audio.rotate.play();
+    audio.rotate.pause();
+    audio.rotate.currentTime = 0;
+  } catch (e) {
+    console.log("Audio unlock failed:", e);
+  }
+});
+
+let rotationActive = false;
+let lastWarningTrigger = null;
+
+/* ================= RING ================= */
+
+const radius = 230;
+const circumference = 2 * Math.PI * radius;
+
+const ring = document.getElementById("progress-ring");
+ring.style.strokeDasharray = circumference;
+ring.style.strokeDashoffset = circumference;
+
+/* ================= UPDATE LOOP ================= */
+
+async function update() {
+  try {
+    const res = await fetch("/api/status");
+    const data = await res.json();
+
+    const modeIsRed = data.mode === "red";
+    const modeColor = modeIsRed ? "#e00000" : "#111111";
+
+    /* ================= TIME ================= */
+
+    const now = new Date(data.currentTime);
+
+    const months = [
+      "January","February","March","April","May","June",
+      "July","August","September","October","November","December"
+    ];
+
+    const month = months[now.getMonth()];
+    const day = now.getDate();
+    const year = now.getFullYear();
+
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+
+    const ampm = hours >= 12 ? "pm" : "am";
+    hours = hours % 12 || 12;
+
+    document.getElementById("header").innerHTML =
+      `${month} ${day}, ${year}<br>${hours}:${minutes} ${ampm}`;
+
+    /* ================= COUNTDOWN ================= */
+
+    document.getElementById("countdown").textContent = data.countdownText;
+
+    /* ================= MODE ================= */
+
+    const schedule = Array.isArray(data.schedule) ? data.schedule : [];
+
+    document.getElementById("mode").innerHTML = `
+      <div style="line-height:1.1;">
+        <div style="color:${modeColor}; font-size:34px; font-weight:600;">
+          ROTATE ON ${data.mode.toUpperCase()}
+        </div>
+        <div style="color:${modeColor}; font-size:20px; font-style:italic; opacity:0.8;">
+          ${schedule.map(n => ":" + String(n).padStart(2, "0")).join("   ")}
+        </div>
+      </div>
+    `;
+
+    /* ================= RING ================= */
+
+    const progress = data.progress;
+    ring.style.stroke = modeColor;
+    ring.style.strokeDashoffset =
+      circumference - (progress * circumference);
+
+    /* ================= LEADERBOARD ================= */
+
+    const teams = data.leaderboard || [];
+
+    document.getElementById("teams").innerHTML =
+      teams.sort((a,b)=>b.score-a.score)
+        .map(t => `
+          <div>
+            <span>${t.name}</span>
+            <span><b>${t.score}</b></span>
+          </div>
+        `).join("");
+
+    /* ================= MESSAGE ================= */
+
+    document.getElementById("messageText").innerText =
+      data.message || "";
+
+    /* ================= UPCOMING ================= */
+
+    const reminders = Array.isArray(data.reminders) ? data.reminders : [];
+
+    const upcoming = reminders
+      .filter(r => r.isUpcoming)
+      .sort((a,b)=>(a.minutesUntilStart||0)-(b.minutesUntilStart||0))[0];
+
+    const upcomingEl = document.getElementById("upcomingReminder");
+
+    if (upcoming) {
+      upcomingEl.innerHTML = `
+        <span style="font-size:26px; font-weight:700; color:${modeColor};">
+          Next Rotation:
+        </span>
+        <span style="font-size:26px; font-weight:700; color:${modeColor};">
+          ${upcoming.title}
+        </span>
+      `;
+    } else {
+      upcomingEl.textContent = "";
+    }
+
+    /* ================= OVERLAY ================= */
+
+    const seconds = data.secondsRemaining;
+    const overlay = document.getElementById("overlay");
+
+    if (seconds <= 0 && !rotationActive) {
+      rotationActive = true;
+      overlay.style.display = "flex";
+
+      if (audioEnabled) audio.rotate.play();
+
+      setTimeout(() => {
+        overlay.style.display = "none";
+        rotationActive = false;
+      }, 6000);
+    }
+
+    /* ================= WARNING ================= */
+
+    if (seconds <= 120 && seconds > 119) {
+      if (lastWarningTrigger !== data.nextRotation && audioEnabled) {
+        audio.warn.play();
+        setTimeout(() => audio.warn.play(), 250);
+        lastWarningTrigger = data.nextRotation;
+      }
+    }
+
+    if (seconds > 121) lastWarningTrigger = null;
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById("mode").textContent = "CONNECTION ERROR";
+  }
+}
+
+setInterval(update, 1000);
+update();
+
+</script>
+
+</body>
+</html>

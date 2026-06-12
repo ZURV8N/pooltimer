@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PoolTimer</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: white;
+      color: black;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ---------------- HEADER ---------------- */
+    #header {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 34px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    /* ---------------- CENTER RING ---------------- */
+    #ring-container {
+      position: relative;
+      width: 600px;
+      height: 600px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    svg {
+      transform: rotate(-90deg);
+      width: 600px;
+      height: 600px;
+    }
+
+    .track {
+      stroke: #e6e6e6;
+      stroke-width: 22;
+      fill: none;
+    }
+
+    .progress {
+      stroke: black;
+      stroke-width: 22;
+      fill: none;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s linear;
+    }
+
+    /* ---------------- CENTER TEXT ---------------- */
+    #countdown {
+      position: absolute;
+      font-size: 130px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    #subtitle {
+      position: absolute;
+      margin-top: 160px;
+      font-size: 18px;
+      opacity: 0.7;
+    }
+
+    /* ---------------- MODE ---------------- */
+    #mode {
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    #rotations {
+      display: none;
+    }
+
+    /* ---------------- UPCOMING REMINDER ---------------- */
+    #upcomingReminder {
+      margin-top: 8px;
+      text-align: center;
+      min-height: 34px;
+      line-height: 1.2;
+    }
+
+    /* ---------------- ACTIVE BANNER ---------------- */
+    #activeBanner {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 18px 10px;
+
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
+
+      display: none;
+      z-index: 50;
+    }
+
+    /* ---------------- OVERLAY ---------------- */
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      color: red;
+
+      display: none;
+      align-items: center;
+      justify-content: center;
+
+      font-size: 140px;
+      font-weight: bold;
+      z-index: 999;
+    }
+
+    /* ---------------- AUDIO ---------------- */
+    #unlock {
+      position: absolute;
+      bottom: 10px;
+      font-size: 14px;
+      opacity: 0.4;
+      cursor: pointer;
+      z-index: 200;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div id="header">Loading...</div>
+
+  <!-- CENTER -->
+  <div id="ring-container">
+
+    <svg>
+      <circle class="track" cx="300" cy="300" r="250" />
+      <circle id="progress-ring" class="progress" cx="300" cy="300" r="250" />
+    </svg>
+
+    <div id="countdown">--:--</div>
+    <div id="subtitle">until next rotation</div>
+
+  </div>
+
+  <!-- MODE -->
+  <div id="mode">LOADING...</div>
+  <div id="rotations"></div>
+
+  <!-- UPCOMING REMINDER -->
+  <div id="upcomingReminder"></div>
+
+  <!-- ACTIVE BANNER -->
+  <div id="activeBanner"></div>
+
+  <!-- OVERLAY -->
+  <div id="overlay">ROTATE</div>
+
+  <!-- AUDIO -->
+  <div id="unlock">Tap to enable audio</div>
+
+<script>
+let audioEnabled = false;
+
+const audio = {
+  warn: new Audio("/sounds/warn.mp3"),
+  rotate: new Audio("/sounds/chime.mp3")
+};
+
+document.getElementById("unlock").addEventListener("click", async () => {
+  audioEnabled = true;
+  document.getElementById("unlock").style.display = "none";
+
+  try {
+    await audio.warn.play();
+    audio.warn.pause();
+    audio.warn.currentTime = 0;
+
+    await audio.rotate.play();
+    audio.rotate.pause();
+    audio.rotate.currentTime = 0;
+  } catch (e) {
+    console.log("Audio unlock failed:", e);
+  }
+});
+
+let rotationActive = false;
+let lastWarningTrigger = null;
+
+/* ---------------- RING ---------------- */
+
+const radius = 250;
+const circumference = 2 * Math.PI * radius;
+
+const ring = document.getElementById("progress-ring");
+ring.style.strokeDasharray = circumference;
+ring.style.strokeDashoffset = circumference;
+
+/* ---------------- UPDATE ---------------- */
+
+async function update() {
+  try {
+    const res = await fetch("/api/status");
+    const data = await res.json();
+
+    const reminders = Array.isArray(data.reminders) ? data.reminders : [];
+
+    const active = reminders.find(r => r.isActive);
+
+    const upcoming = reminders
+      .filter(r => r.isUpcoming)
+      .sort((a, b) => (a.minutesUntilStart || 0) - (b.minutesUntilStart || 0))[0];
+
+    const modeIsRed = data.mode === "red";
+    const modeColor = modeIsRed ? "#e00000" : "#111111";
+
+    /* ---------------- ACTIVE BANNER ---------------- */
+
+    const banner = document.getElementById("activeBanner");
+
+    if (active) {
+      banner.style.display = "block";
+      banner.style.background = modeColor;
+      banner.style.color = "white";
+      banner.textContent = active.title;
+    } else {
+      banner.style.display = "none";
+    }
+
+    /* ---------------- UPCOMING ---------------- */
+
+    const upcomingEl = document.getElementById("upcomingReminder");
+
+    if (upcoming) {
+      upcomingEl.innerHTML = `
+        <span style="font-size:26px; font-weight:700; color:${modeColor};">
+          Next Rotation:
+        </span>
+        <span style="font-size:26px; font-weight:700; color:${modeColor};">
+          ${upcoming.title}
+        </span>
+      `;
+    } else {
+      upcomingEl.textContent = "";
+    }
+
+    /* ---------------- TIME ---------------- */
+
+    const now = new Date(data.currentTime);
+
+    const months = [
+      "January","February","March","April","May","June",
+      "July","August","September","October","November","December"
+    ];
+
+    const month = months[now.getMonth()];
+    const day = now.getDate();
+    const year = now.getFullYear();
+
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+
+    const ampm = hours >= 12 ? "pm" : "am";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+
+    const headerTime = `${hours}:${minutes} ${ampm}`;
+
+    document.getElementById("header").innerHTML =
+      `${month} ${day}, ${year}<br>${headerTime}`;
+
+    /* ---------------- COUNTDOWN ---------------- */
+
+    document.getElementById("countdown").textContent =
+      data.countdownText;
+
+    /* ---------------- MODE + SCHEDULE ---------------- */
+
+    const schedule = Array.isArray(data.schedule) ? data.schedule : [];
+
+    document.getElementById("mode").innerHTML = `
+      <div style="text-align:center; line-height:1.1;">
+        <div style="
+          color:${modeColor};
+          font-size:34px;
+          font-weight:600;
+          margin:0;
+          padding:0;
+        ">
+          ROTATE ON ${data.mode.toUpperCase()}
+        </div>
+
+        <div style="
+          color:${modeColor};
+          font-size:20px;
+          font-style:italic;
+          opacity:0.8;
+          margin-top:2px;
+        ">
+          ${schedule.map(n => ":" + String(n).padStart(2, "0")).join("   ")}
+        </div>
+      </div>
+    `;
+
+    /* ---------------- PROGRESS ---------------- */
+
+    const progress = data.progress;
+    ring.style.stroke = modeColor;
+    ring.style.strokeDashoffset = circumference - (progress * circumference);
+
+    /* ---------------- ROTATION OVERLAY ---------------- */
+
+    const seconds = data.secondsRemaining;
+    const overlay = document.getElementById("overlay");
+
+    if (seconds <= 0 && !rotationActive) {
+      rotationActive = true;
+
+      overlay.style.display = "flex";
+
+      if (audioEnabled) {
+        audio.rotate.play();
+      }
+
+      setTimeout(() => {
+        overlay.style.display = "none";
+        rotationActive = false;
+      }, 6000);
+    }
+
+    /* ---------------- WARNING ---------------- */
+
+    if (seconds <= 120 && seconds > 119) {
+      if (lastWarningTrigger !== data.nextRotation && audioEnabled) {
+        audio.warn.play();
+        setTimeout(() => audio.warn.play(), 250);
+        lastWarningTrigger = data.nextRotation;
+      }
+    }
+
+    if (seconds > 121) lastWarningTrigger = null;
+
+  } catch (err) {
+    document.getElementById("mode").textContent =
+      "CONNECTION ERROR";
+    console.error(err);
+  }
+}
+
+setInterval(update, 1000);
+update();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "leaderboard": [
+    {
+      "name": "Team A",
+      "score": 0
+    },
+    {
+      "name": "Team B",
+      "score": 0
+    },
+    {
+      "name": "Team C",
+      "score": 0
+    },
+    {
+      "name": "Team D",
+      "score": 0
+    }
+  ],
+  "message": ""
+}

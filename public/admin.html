@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PoolTimer Admin</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .section {
+      background: white;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+    }
+
+    button {
+      padding: 10px 12px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    input {
+      padding: 8px;
+      margin: 5px;
+    }
+
+    .reminder {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .red { color: #d60000; font-weight: bold; }
+    .black { color: #222; font-weight: bold; }
+  </style>
+</head>
+
+<body>
+
+  <h1>PoolTimer Admin</h1>
+
+  <!-- MODE -->
+  <div class="section">
+    <h2>Mode</h2>
+
+    <button onclick="setMode('red')">RED DAY</button>
+    <button onclick="setMode('black')">BLACK DAY</button>
+
+    <div id="currentMode"></div>
+  </div>
+
+  <!-- ADD REMINDER -->
+  <div class="section">
+    <h2>Add Reminder</h2>
+
+    <input id="title" placeholder="Title" />
+    <input id="time" placeholder="HH:MM (24h)" />
+
+    <button onclick="addReminder()">Add</button>
+  </div>
+
+  <!-- REMINDERS LIST -->
+  <div class="section">
+    <h2>Reminders</h2>
+    <div id="reminderList"></div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div class="section">
+    <h2>Leaderboard</h2>
+
+    <div id="leaderboard"></div>
+
+    <button onclick="saveLeaderboardFromUI()">Save Leaderboard</button>
+  </div>
+
+  <!-- ANNOUNCEMENTS -->
+  <div class="section">
+    <h2>Announcements</h2>
+
+    <textarea id="announcementText" rows="5" style="width:100%; padding:8px;"></textarea>
+
+    <button onclick="saveAnnouncementFromUI()">Save Message</button>
+  </div>
+
+  <!-- TEST -->
+  <div class="section">
+    <h2>Test</h2>
+    <button onclick="testRotation()">Trigger Rotation Alert</button>
+  </div>
+
+  <script src="admin.js"></script>
+
+</body>
+</html>
