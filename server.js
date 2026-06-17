@@ -5,6 +5,7 @@ const path = require("path");
 const DATA_FILE = path.join(__dirname, "data", "state.json");
 const CONFIG_PATH = path.join(__dirname, "data", "config.json");
 const REMINDERS_PATH = path.join(__dirname, "data", "reminders.json");
+const ADMIN_PASSWORD = "AJpool2020"; //
 
 const {
   getCurrentBlock,
@@ -19,6 +20,10 @@ const {
 } = require("./services/remindersService");
 
 const app = express();
+
+function checkAdminPassword(req) {
+  return req.body.password === ADMIN_PASSWORD;
+}
 
 /* ================= STATE LOAD ================= */
 
@@ -224,6 +229,18 @@ app.post("/api/admin/test-rotation", (req, res) => {
     message: "Rotation test triggered",
     time: new Date().toISOString()
   });
+});
+
+app.post("/api/admin/shutdown", (req, res) => {
+  if (!checkAdminPassword(req)) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+  res.json({ success: true });
+
+  setTimeout(() => {
+    require("child_process").exec("sudo shutdown -h now");
+  }, 500);
 });
 
 /* START */

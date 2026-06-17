@@ -214,6 +214,28 @@ async function saveAnnouncementFromUI() {
   alert("Message saved");
 }
 
+async function shutdownPi() {
+  const confirmShutdown = confirm("Shutdown the Raspberry Pi?");
+  if (!confirmShutdown) return;
+
+  const password = prompt("Enter admin password:");
+  if (!password) return;
+
+  const res = await fetch("/api/admin/shutdown", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: "AJpool2020" })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    alert("Pi is shutting down...");
+  } else {
+    alert("Failed: " + (data.error || "unknown error"));
+  }
+}
+
 /* ================= INIT ================= */
 
 loadStatus();
