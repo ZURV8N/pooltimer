@@ -1,21 +1,31 @@
 {
   "leaderboard": [
     {
-      "name": "Team A",
+      "name": "Purple Tiny Turtles",
+      "score": 30
+    },
+    {
+      "name": "Pink Tropical Swans",
       "score": 0
     },
     {
-      "name": "Team B",
+      "name": "Green Goblins",
       "score": 0
     },
     {
-      "name": "Team C",
-      "score": 0
-    },
-    {
-      "name": "Team D",
+      "name": "Blue...",
       "score": 0
     }
   ],
-  "message": ""
+  "message": "",
+  "staffOfWeek": {
+    "lifeguard": {
+      "name": "Jayce Rodgers",
+      "image": "/images/lifeguard.jpg"
+    },
+    "wsi": {
+      "name": "",
+      "image": "/images/wsi.jpg"
+    }
+  }
 }

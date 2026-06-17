@@ -6,8 +6,6 @@ const DATA_FILE = path.join(__dirname, "data", "state.json");
 const CONFIG_PATH = path.join(__dirname, "data", "config.json");
 const REMINDERS_PATH = path.join(__dirname, "data", "reminders.json");
 
-const ADMIN_PASSWORD = "ajpool";
-
 const {
   getCurrentBlock,
   getNextRotation,
@@ -22,14 +20,44 @@ const {
 
 const app = express();
 
-let { leaderboard, message } = loadState();
+/* ================= STATE LOAD ================= */
 
-app.use(express.json());
-app.use(express.static("public"));
+function loadState() {
+  const defaults = {
+    leaderboard: [
+      { name: "Team A", score: 0 },
+      { name: "Team B", score: 0 },
+      { name: "Team C", score: 0 },
+      { name: "Team D", score: 0 }
+    ],
+    message: "",
+    staffOfWeek: {
+      lifeguard: { name: "", image: "" },
+      wsi: { name: "", image: "" }
+    }
+  };
 
-function getSchedule(mode) {
-  return mode === "red" ? [7, 27, 47] : [17, 37, 57];
+  try {
+    const raw = fs.readFileSync(DATA_FILE, "utf8");
+    const saved = JSON.parse(raw);
+
+    return {
+      ...defaults,
+      ...saved,
+      staffOfWeek: {
+        ...defaults.staffOfWeek,
+        ...(saved.staffOfWeek || {})
+      }
+    };
+  } catch (e) {
+    return defaults;
+  }
 }
+
+/* NOW SAFE TO LOAD */
+let { leaderboard, message, staffOfWeek } = loadState();
+
+/* ================= CONFIG ================= */
 
 function loadConfig() {
   try {
@@ -44,6 +72,8 @@ function saveConfig(config) {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
 }
 
+/* ================= REMINDERS ================= */
+
 function loadReminders() {
   try {
     const raw = fs.readFileSync(REMINDERS_PATH, "utf-8");
@@ -54,37 +84,29 @@ function loadReminders() {
 }
 
 function saveReminders(reminders) {
-  fs.writeFileSync(
-    REMINDERS_PATH,
-    JSON.stringify(reminders, null, 2)
-  );
+  fs.writeFileSync(REMINDERS_PATH, JSON.stringify(reminders, null, 2));
 }
 
-function loadState() {
-  try {
-    const raw = fs.readFileSync(DATA_FILE, "utf8");
-    return JSON.parse(raw);
-  } catch (e) {
-    return {
-      leaderboard: [
-        { name: "Team A", score: 0 },
-        { name: "Team B", score: 0 },
-        { name: "Team C", score: 0 },
-        { name: "Team D", score: 0 }
-      ],
-      message: ""
-    };
-  }
+/* ================= CORE ================= */
+
+app.use(express.json());
+app.use(express.static("public"));
+
+function getSchedule(mode) {
+  return mode === "red" ? [7, 27, 47] : [17, 37, 57];
 }
 
 function saveState() {
   const data = {
     leaderboard,
-    message
+    message,
+    staffOfWeek
   };
 
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
+
+/* ================= API ================= */
 
 app.get("/api/status", (req, res) => {
   const now = new Date();
@@ -111,12 +133,12 @@ app.get("/api/status", (req, res) => {
 
     leaderboard,
     message,
-
-    // ⭐ NEW: reminders now live in the display system
-    reminders: enrichedReminders
+    reminders: enrichedReminders,
+    staffOfWeek
   });
 });
 
+/* CONFIG */
 app.get("/api/config", (req, res) => {
   res.json(loadConfig());
 });
@@ -132,13 +154,13 @@ app.post("/api/config", (req, res) => {
   res.json(config);
 });
 
+/* REMINDERS */
 app.get("/api/reminders", (req, res) => {
   res.json(loadReminders());
 });
 
 app.post("/api/reminders", (req, res) => {
   const reminders = loadReminders();
-
   const { title, time } = req.body;
 
   if (!title || !time) {
@@ -167,37 +189,44 @@ app.delete("/api/reminders/:id", (req, res) => {
   res.json({ ok: true });
 });
 
+/* DISPLAY */
 app.get("/display", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "display.html"));
 });
 
+/* ADMIN */
 app.get("/api/admin", (req, res) => {
-  res.json({ leaderboard, message });
+  res.json({ leaderboard, message, staffOfWeek });
 });
 
-app.post("/api/admin/leaderboard", express.json(), (req, res) => {
+app.post("/api/admin/leaderboard", (req, res) => {
   leaderboard = req.body.leaderboard;
   saveState();
   res.json({ success: true });
 });
 
-app.post("/api/admin/message", express.json(), (req, res) => {
+app.post("/api/admin/message", (req, res) => {
   message = req.body.message || "";
   saveState();
   res.json({ success: true });
 });
 
-app.post("/api/admin/test-rotation", (req, res) => {
-  const now = new Date();
+app.post("/api/admin/staff", (req, res) => {
+  staffOfWeek = req.body.staffOfWeek || staffOfWeek;
+  saveState();
+  res.json({ success: true });
+});
 
-  // temporarily force a rotation event trigger
+/* TEST */
+app.post("/api/admin/test-rotation", (req, res) => {
   res.json({
     success: true,
     message: "Rotation test triggered",
-    time: now.toISOString()
+    time: new Date().toISOString()
   });
 });
 
+/* START */
 app.listen(3100, () => {
   console.log("PoolTimer running on port 3100");
 });

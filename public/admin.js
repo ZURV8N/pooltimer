@@ -19,6 +19,7 @@ async function loadStatus() {
   renderReminders(data.reminders || []);
 
   /* ---------------- MESSAGE (SAFE UPDATE) ---------------- */
+
   const msgBox = document.getElementById("announcementText");
 
   if (document.activeElement !== msgBox) {
@@ -26,8 +27,24 @@ async function loadStatus() {
   }
 
   /* ---------------- LEADERBOARD (SAFE UPDATE) ---------------- */
+
   if (!isEditingLeaderboard) {
     renderLeaderboard(data.leaderboard || []);
+  }
+
+  /* ---------------- STAFF OF WEEK (SAFE UPDATE) ---------------- */
+
+  const staff = data.staffOfWeek || {};
+
+  const lgName = document.getElementById("lgName");
+  const wsiName = document.getElementById("wsiName");
+
+  if (lgName && document.activeElement !== lgName) {
+    lgName.value = staff.lifeguard?.name || "";
+  }
+
+  if (wsiName && document.activeElement !== wsiName) {
+    wsiName.value = staff.wsi?.name || "";
   }
 }
 
@@ -153,6 +170,30 @@ async function saveLeaderboardFromUI() {
   await saveLeaderboard(leaderboardState);
   isEditingLeaderboard = false;
   alert("Leaderboard saved");
+}
+
+
+/* ================= STAFF OF THE WEEK ================= */
+
+async function saveStaffOfWeek() {
+  const staff = {
+    lifeguard: {
+      name: document.getElementById("lgName").value,
+      image: "/images/lifeguard.jpg"
+    },
+    wsi: {
+      name: document.getElementById("wsiName").value,
+      image: "/images/wsi.jpg"
+    }
+  };
+
+  await fetch("/api/admin/staff", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ staffOfWeek: staff })
+  });
+
+  alert("Saved Staff of the Week");
 }
 
 /* ================= MESSAGE ================= */

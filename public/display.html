@@ -10,6 +10,7 @@
       background: white;
       font-family: Arial, sans-serif;
       overflow: hidden;
+      position: relative;
     }
 
     /* ================= MAIN LAYOUT ================= */
@@ -38,21 +39,71 @@
       flex-direction: column;
       border-left: 2px solid #ddd;
       box-sizing: border-box;
+      height: 100vh;
     }
 
-    #leaderboard {
-      flex: 1;
-      border-bottom: 2px solid #ddd;
+    /* ===== TOP: Leaderboard ===== */
+    #leaderboardPanel {
+      flex: 0 0 28%;
       padding: 15px;
+      border-bottom: 2px solid #ddd;
       overflow: hidden;
     }
 
+    /* ===== MIDDLE: Staff ===== */
+    #staffPanel {
+      flex: 0 0 32%;
+      padding: 15px;
+      border-bottom: 2px solid #ddd;
+      overflow: hidden;
+    }
+
+    /* STAFF GRID (NEW — replaces row layout) */
+    .staffGrid {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      height: calc(100% - 40px);
+      gap: 10px;
+    }
+
+    .staffCard {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-align: center;
+    }
+
+    .staffRole {
+      font-size: 16px;
+      font-weight: 700;
+      opacity: 0.8;
+    }
+
+    .staffCard img {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #ccc;
+    }
+
+    .staffCard div {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* ===== BOTTOM: Announcements ===== */
     #messageBoard {
       flex: 1;
       padding: 15px;
       overflow-y: auto;
     }
 
+    /* ===== Shared title ===== */
     .panelTitle {
       font-size: 22px;
       font-weight: 600;
@@ -126,26 +177,106 @@
       line-height: 1.2;
     }
 
-    /* ================= ACTIVE BANNER ================= */
-    #activeBanner {
-      position: absolute;
+    /* ================= ACTIVE REMINDERS ================= */
+    #activeReminderBar {
+      position: fixed;
       bottom: 0;
       left: 0;
       width: 100%;
-      padding: 18px;
-      font-size: 28px;
-      font-weight: bold;
-      text-align: center;
+      height: 60px;
+
       display: none;
-      z-index: 50;
+      align-items: center;
+      justify-content: center;
+
+      font-size: 28px;
+      font-weight: 700;
+      color: white;
+
+      z-index: 9999;
     }
 
     /* ================= LEADERBOARD ================= */
+    #teams {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    /* each row */
     #teams div {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+
+      padding: 10px 12px;
+      border-radius: 10px;
+
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    /* team name */
+    #teams div span:first-child {
+      font-size: 18px;
+      font-weight: 600;
+      color: #222;
+    }
+
+    /* score */
+    #teams div span:last-child {
+      font-size: 22px;
+      font-weight: 800;
+      color: #111;
+    }
+
+    /* ================= TOP TEAM BASE (applies glow container feel) ================= */
+    #teams div:first-child {
+      border-left: 6px solid transparent;
+    }
+
+    /* slightly larger emphasis for top row text */
+    #teams div:first-child span:first-child {
       font-size: 20px;
-      padding: 6px 0;
+    }
+
+    #teams div:first-child span:last-child {
+      font-size: 26px;
+    }
+
+    /* fade lower teams slightly */
+    #teams div:nth-child(n+2) {
+      opacity: 0.9;
+    }
+
+    /* ================= TEAM COLOR GLOWS (ONLY FIRST PLACE GETS THESE) ================= */
+
+    /* Purple Tiny Turtles */
+    #teams div.team-purple {
+      background: rgba(160, 90, 255, 0.18);
+      border-left-color: #a05aff;
+      box-shadow: 0 0 12px rgba(160, 90, 255, 0.25);
+    }
+
+    /* Green Goblins */
+    #teams div.team-green {
+      background: rgba(0, 200, 80, 0.18);
+      border-left-color: #00c850;
+      box-shadow: 0 0 12px rgba(0, 200, 80, 0.25);
+    }
+
+    /* Pink Tropical Swans */
+    #teams div.team-pink {
+      background: rgba(255, 105, 180, 0.18);
+      border-left-color: #ff69b4;
+      box-shadow: 0 0 12px rgba(255, 105, 180, 0.25);
+    }
+
+    /* Blue team */
+    #teams div.team-blue {
+      background: rgba(0, 140, 255, 0.18);
+      border-left-color: #008cff;
+      box-shadow: 0 0 12px rgba(0, 140, 255, 0.25);
     }
 
     /* ================= MESSAGE ================= */
@@ -180,6 +311,29 @@
       cursor: pointer;
       z-index: 200;
     }
+
+    #poolLogo {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      width: 90px;
+      height: 90px;
+      opacity: 0.85;
+      z-index: 10000;
+
+      transition: none;
+    }
+
+    /* when active bar is showing */
+    body.barActive #poolLogo {
+      bottom: 70px;
+    }
+
+    #poolLogo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
   </style>
 </head>
 
@@ -206,20 +360,43 @@
 
     <div id="upcomingReminder"></div>
 
-    <div id="activeBanner"></div>
+    <div id="activeReminderBar"></div>
 
   </div>
 
   <!-- RIGHT -->
   <div id="rightPanel">
 
-    <div id="leaderboard">
+    <!-- LEADERBOARD -->
+    <div id="leaderboardPanel">
       <div class="panelTitle">Leaderboard</div>
       <div id="teams"></div>
     </div>
 
+    <!-- STAFF OF WEEK -->
+    <div id="staffPanel">
+      <div class="panelTitle">Staff of the Week</div>
+
+      <div class="staffGrid">
+
+        <div class="staffCard">
+          <div class="staffRole">Lifeguard</div>
+          <img id="lifeguardImg" />
+          <div id="lifeguardName"></div>
+        </div>
+
+        <div class="staffCard">
+          <div class="staffRole">WSI</div>
+          <img id="wsiImg" />
+          <div id="wsiName"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ANNOUNCEMENTS -->
     <div id="messageBoard">
-      <div class="panelTitle">Announcements</div>
+    <div class="panelTitle">Announcements</div>
       <div id="messageText"></div>
     </div>
 
@@ -332,28 +509,88 @@ async function update() {
 
     document.getElementById("teams").innerHTML =
       teams.sort((a,b)=>b.score-a.score)
-        .map(t => `
-          <div>
-            <span>${t.name}</span>
-            <span><b>${t.score}</b></span>
-          </div>
-        `).join("");
+        .map((t, i) => {
+          let teamClass = "";
+
+          if (i === 0) {
+            const name = t.name.toLowerCase();
+
+            if (name.includes("purple")) teamClass = "team-purple";
+            else if (name.includes("green")) teamClass = "team-green";
+            else if (name.includes("pink")) teamClass = "team-pink";
+            else if (name.includes("blue")) teamClass = "team-blue";
+          }
+
+          return `
+            <div class="${teamClass}">
+              <span>${i + 1}. ${t.name}</span>
+              <span><b>${t.score}</b></span>
+            </div>
+          `;
+        }).join("");
 
     /* ================= MESSAGE ================= */
 
     document.getElementById("messageText").innerText =
       data.message || "";
 
-    /* ================= UPCOMING ================= */
+
+
+    /* ================= STAFF OF WEEK ================= */
+
+    const staff = data.staffOfWeek || {};
+
+    const lgName = document.getElementById("lifeguardName");
+    const lgImg = document.getElementById("lifeguardImg");
+    const wsiName = document.getElementById("wsiName");
+    const wsiImg = document.getElementById("wsiImg");
+
+    if (lgName && lgImg && wsiName && wsiImg) {
+      lgName.textContent = staff.lifeguard?.name || "";
+      wsiName.textContent = staff.wsi?.name || "";
+
+      lgImg.src = staff.lifeguard?.image || "";
+      wsiImg.src = staff.wsi?.image || "";
+
+      // optional: hide broken images cleanly
+      lgImg.style.display = staff.lifeguard?.image ? "block" : "none";
+      wsiImg.style.display = staff.wsi?.image ? "block" : "none";
+    }
+
+    /* ================= REMINDERS ================= */
 
     const reminders = Array.isArray(data.reminders) ? data.reminders : [];
 
+    /* ---------------- ACTIVE FIRST ---------------- */
+    const active = reminders.find(r => r.isActive);
+
+    /* ---------------- NEXT UP ---------------- */
     const upcoming = reminders
-      .filter(r => r.isUpcoming)
-      .sort((a,b)=>(a.minutesUntilStart||0)-(b.minutesUntilStart||0))[0];
+      .filter(r => r.isUpcoming && !r.isActive)
+      .sort((a, b) =>
+        (a.minutesUntilStart ?? 9999) - (b.minutesUntilStart ?? 9999)
+      )[0];
 
+    const reminderToShow = active || upcoming;
+
+    /* ---------------- ELEMENTS ---------------- */
     const upcomingEl = document.getElementById("upcomingReminder");
+    const activeBar = document.getElementById("activeReminderBar");
 
+    /* ================= ACTIVE (BOTTOM BAR) ================= */
+    if (active) {
+      activeBar.style.display = "flex";
+      activeBar.textContent = active.title;
+      activeBar.style.background = modeColor;
+
+      document.body.classList.add("barActive");
+    } else {
+      activeBar.style.display = "none";
+
+      document.body.classList.remove("barActive");
+    }
+
+    /* ================= UPCOMING / NEXT ================= */
     if (upcoming) {
       upcomingEl.innerHTML = `
         <span style="font-size:26px; font-weight:700; color:${modeColor};">
@@ -406,6 +643,11 @@ setInterval(update, 1000);
 update();
 
 </script>
+
+<div id="poolLogo">
+  <img src="/images/logo.png" />
+</div>
+<div id="activeReminderBar"></div>
 
 </body>
 </html>
